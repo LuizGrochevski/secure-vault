@@ -1,0 +1,31 @@
+name: secure_vault
+description: Local-first password vault with AES encryption, biometric lock and HaveIBeenPwned leak check.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.2.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_bloc: ^8.1.6
+  equatable: ^2.0.5
+  flutter_secure_storage: ^9.2.2
+  encrypt: ^5.0.3
+  local_auth: ^2.3.0
+  http: ^1.2.2
+  crypto: ^3.0.5
+  uuid: ^4.5.1
+  path_provider: ^2.1.4
+  shared_preferences: ^2.3.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+  bloc_test: ^9.1.7
+  mocktail: ^1.0.4
+
+flutter:
+  uses-material-design: true
