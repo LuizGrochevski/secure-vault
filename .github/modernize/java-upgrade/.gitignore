@@ -1,0 +1,32 @@
+# Flutter
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+build/
+
+# Android
+.gradle/
+android/.gradle/
+android/local.properties
+
+# IDE
+.idea/
+.vscode/
+
+# Secrets
+.env
+.env.*
+*.key
+*.pem
+*.jks
+*.keystore
+
+# Local databases / runtime data
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+*.log
