@@ -71,20 +71,21 @@ O sistema permite armazenar credenciais, gerar senhas fortes e proteger o acesso
 
 ---
 
-## 🔑 Password Generator
+## 🔎 Password Leak Detection
 
-O Secure Vault possui um gerador de senhas configurável capaz de produzir credenciais de alta entropia utilizando diferentes conjuntos de caracteres.
+O sistema também possui mecanismo para verificar se uma senha foi encontrada em bases conhecidas de vazamentos, usando a API do **HaveIBeenPwned** (via k-anonymity, sem enviar a senha completa).
 
-O usuário pode controlar o comprimento da senha diretamente através da interface.
-
-Exemplo:
+Exemplo real:
 
 ```text
-Comprimento: 64
-
-KmxRU0v0@hQ,gtNrG-iVNHw5!ZF4R!x14i_E&{F&b
-0Xs6v[M¡@lv.0Tdr30H:VAL
+⚠️ Encontrada 313979 vezes em vazamentos
 ```
+ou
+```text
+✅ Não encontrada em vazamentos
+```
+
+Essa funcionalidade permite identificar credenciais potencialmente comprometidas.
 
 ---
 
