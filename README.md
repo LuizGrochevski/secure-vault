@@ -192,13 +192,25 @@ Depois siga as instruções específicas da plataforma.
 
 O acesso ao cofre é protegido por autenticação biométrica.
 
-### Cofre
-
-Exibe as credenciais armazenadas localmente.
+<p align="center">
+  <img src="screenshots/lock-screen.jpg" width="250" alt="Tela de desbloqueio com biometria"/>
+</p>
 
 ### Gerador de senhas
 
 Permite gerar senhas com comprimento configurável.
+
+<p align="center">
+  <img src="screenshots/password-generator.jpg" width="250" alt="Gerador de senhas"/>
+</p>
+
+### Verificação de vazamentos
+
+Identifica se a senha já foi exposta em vazamentos conhecidos, usando o HaveIBeenPwned.
+
+<p align="center">
+  <img src="screenshots/breach-check.jpg" width="250" alt="Verificação de vazamento de senha"/>
+</p>
 
 ### Editor de credenciais
 
