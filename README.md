@@ -1,197 +1,123 @@
 # Secure Vault 🔐🛡️
 
-![Platform](https://img.shields.io/badge/Platform-Android-green?style=for-the-badge&logo=android)
-![Security](https://img.shields.io/badge/Security-AES--256-red?style=for-the-badge)
+![Platform](https://img.shields.io/badge/Platform-Android%20(Flutter)-green?style=for-the-badge&logo=android)
+![Security](https://img.shields.io/badge/Crypto-AES--256--GCM-red?style=for-the-badge)
 ![Biometric](https://img.shields.io/badge/Auth-Biometric-blue?style=for-the-badge)
 ![Storage](https://img.shields.io/badge/Storage-Local--First-orange?style=for-the-badge)
 ![License](https://img.shields.io/badge/License-Educational-orange?style=for-the-badge)
 
-O **Secure Vault** é um gerenciador de credenciais **local-first** desenvolvido para Android, com foco em privacidade, segurança e armazenamento criptografado.
+Gerenciador de credenciais **local-first** em **Flutter** (foco atual: Android), com armazenamento criptografado, biometria e checagem de senhas vazadas via Have I Been Pwned (k-anonymity).
 
-O sistema permite armazenar credenciais, gerar senhas fortes e proteger o acesso ao cofre utilizando **criptografia AES-256** e **autenticação biométrica**.
+> Suas credenciais permanecem no dispositivo. Não há conta, sync em nuvem nem telemetria.
 
-> Suas credenciais pertencem a você e devem permanecer protegidas no dispositivo.
-
----
-
-## 🚀 Funcionalidades
-
-- 🔐 Armazenamento local de credenciais
-- 🛡️ Criptografia **AES-256**
-- 👆 Autenticação biométrica
-- 🔑 Gerador de senhas aleatórias
-- ⚙️ Controle configurável do tamanho das senhas
-- 📋 Cópia rápida de credenciais
-- 👁️ Visualização protegida de senhas
-- 📝 Armazenamento de notas associadas às credenciais
-- 🌐 Suporte a URL associada à credencial
-- 🔎 Verificação de senhas comprometidas em vazamentos
-- 📱 Interface otimizada para Android
-- 🔒 Arquitetura **local-first**
-- 🚫 Sem necessidade de sincronização com servidores externos
+Modelo de ameaça e limites: ver [SECURITY.md](SECURITY.md).
 
 ---
 
-## 🧠 Arquitetura
+## Funcionalidades
 
-```text
-                ┌─────────────────────┐
-                │      Secure Vault   │
-                └──────────┬──────────┘
-                           │
-                           ▼
-                ┌─────────────────────┐
-                │ Authentication      │
-                │ Biometric / Unlock  │
-                └──────────┬──────────┘
-                           │
-                           ▼
-                ┌─────────────────────┐
-                │ Credential Manager  │
-                └──────────┬──────────┘
-                           │
-                ┌──────────┴──────────┐
-                ▼                     ▼
-       ┌─────────────────┐   ┌─────────────────┐
-       │ Password        │   │ Credential      │
-       │ Generator       │   │ Management      │
-       └─────────────────┘   └────────┬────────┘
-                                      │
-                                      ▼
-                            ┌─────────────────┐
-                            │ Encryption      │
-                            │ AES-256         │
-                            └────────┬────────┘
-                                     │
-                                     ▼
-                            ┌─────────────────┐
-                            │ Local Storage   │
-                            └─────────────────┘
-```
+- Armazenamento local de credenciais (título, usuário/email, senha, URL, notas)
+- **AES-256-GCM** com IV/nonce aleatório **por operação** (formato de payload `v2:`)
+- Chave em `FlutterSecureStorage` (Keystore / Keychain)
+- Autenticação biométrica (`local_auth`)
+- Gerador de senhas com `Random.secure()` (CSPRNG), comprimento configurável (8–64)
+- Verificação de vazamentos (HIBP range API — só o prefixo SHA-1 sai do device)
+- Cópia para clipboard e visualização com obscure
+- Arquitetura local-first — sem servidor próprio
 
 ---
 
-## 🔎 Password Leak Detection
+## Stack
 
-O sistema também possui mecanismo para verificar se uma senha foi encontrada em bases conhecidas de vazamentos, usando a API do **HaveIBeenPwned** (via k-anonymity, sem enviar a senha completa).
+| Camada | Tecnologia |
+|--------|------------|
+| Linguagem / UI | Dart 3 · Flutter |
+| Estado | flutter_bloc + equatable |
+| Criptografia | package `encrypt` — AES-256-GCM; `crypto` (SHA-1 para HIBP) |
+| Secure storage | flutter_secure_storage |
+| Biometria | local_auth |
+| Rede (só HIBP) | http |
+| IDs | uuid |
+| Testes (dev) | flutter_test, bloc_test, mocktail |
 
-Exemplo real:
+Plataforma prioritária de uso e screenshots: **Android**. O projeto Flutter inclui pastas de outras plataformas; o foco de validação atual é Android.
+
+---
+
+## Criptografia (resumo)
+
+| Item | Detalhe |
+|------|--------|
+| Cipher | AES-256-GCM |
+| Chave | 32 bytes (`Key.fromSecureRandom`), guardada no secure storage |
+| IV | 12 bytes aleatórios **por** cifragem |
+| Formato | `v2:<base64(iv)>:<base64(ciphertext)>` |
+| Legacy | Blobs antigos (IV fixo) tentam migrar na leitura e são regravados em v2 |
+
+Ainda **não** há master password + KDF (Argon2/PBKDF2). A chave depende do secure storage do dispositivo + gate biométrico. Detalhes e roadmap cripto em [SECURITY.md](SECURITY.md).
+
+---
+
+## Password leak detection
+
+Integração com [Have I Been Pwned](https://haveibeenpwned.com/Passwords) via API de *range* (k-anonymity):
+
+1. SHA-1 da senha no device  
+2. Envio apenas dos **5 primeiros** caracteres do hash  
+3. Comparação do sufixo localmente  
+
+Exemplo de UI:
 
 ```text
 ⚠️ Encontrada 313979 vezes em vazamentos
-```
-ou
-```text
 ✅ Não encontrada em vazamentos
 ```
 
-Essa funcionalidade permite identificar credenciais potencialmente comprometidas.
+A senha em claro **não** é enviada.
 
 ---
 
-## 🛡️ Credential Storage
-
-Cada credencial pode armazenar:
-
-| Campo | Descrição |
-|---|---|
-| Título | Identificação da credencial |
-| Usuário / Email | Nome de usuário ou email |
-| Senha | Credencial protegida |
-| URL | Endereço associado |
-| Notas | Informações adicionais |
-
----
-
-## 🔒 Security Model
-
-O Secure Vault foi projetado seguindo uma abordagem **local-first**.
+## Arquitetura (app)
 
 ```text
-                Device
-                   │
-                   ▼
-          ┌─────────────────┐
-          │ Biometric Auth  │
-          └────────┬────────┘
-                   │
-                   ▼
-          ┌─────────────────┐
-          │ Secure Vault    │
-          └────────┬────────┘
-                   │
-                   ▼
-          ┌─────────────────┐
-          │ AES-256         │
-          │ Encryption      │
-          └────────┬────────┘
-                   │
-                   ▼
-          ┌─────────────────┐
-          │ Local Storage   │
-          └─────────────────┘
+lib/
+  core/           # constants, utils (EncryptionService, HibpService)
+  features/
+    auth/         # biometria (BLoC + LoginPage)
+    vault/        # CRUD de entradas (BLoC + repository + UI)
+    generator/    # gerador de senhas (BLoC + UI)
+  shared/theme/
+  main.dart
 ```
 
-O objetivo é minimizar a exposição das credenciais e evitar que informações sensíveis precisem ser armazenadas em infraestrutura externa.
+Fluxo resumido: biometria → vault (JSON de entradas cifrado em GCM) → secure storage.
 
 ---
 
-## 🔎 Password Leak Detection
+## Build (Android)
 
-O sistema também possui mecanismo para verificar se uma senha foi encontrada em bases conhecidas de vazamentos.
-
-Exemplo:
-
-```text
-✅ Não encontrada em vazamentos
-```
-
-ou:
-
-```text
-⚠️ Encontrada em vazamentos
-```
-
-Essa funcionalidade permite identificar credenciais potencialmente comprometidas.
-
----
-
-## 🛠️ Tecnologias
-
-| Tecnologia | Uso |
-|---|---|
-| Android | Plataforma |
-| [A DEFINIR] | Linguagem principal |
-| [A DEFINIR] | UI |
-| AES-256 | Criptografia |
-| Biometric Authentication | Autenticação |
-| [A DEFINIR] | Persistência local |
-| [A DEFINIR] | Secure Storage |
-
-> A stack definitiva será documentada após a análise do código-fonte.
-
----
-
-## 📦 Instalação
-
-Clone o repositório:
+Requisitos: Flutter SDK estável, Android SDK, device ou emulador com biometria (ou sensor simulado).
 
 ```bash
 git clone https://github.com/LuizGrochevski/secure-vault.git
 cd secure-vault
+flutter pub get
+flutter run
 ```
 
-Depois siga as instruções específicas da plataforma.
+Release (exemplo):
 
-> A documentação detalhada de build será adicionada após a organização final do projeto.
+```bash
+flutter build apk --release
+```
+
+> Após atualizar para o formato `v2` (GCM): se houver dados no formato antigo, a primeira abertura tenta migrar. Se falhar, limpe os dados do app e recrie as entradas.
 
 ---
 
-## 📱 Interface
+## Interface
 
 ### Tela de desbloqueio
-
-O acesso ao cofre é protegido por autenticação biométrica.
 
 <p align="center">
   <img src="screenshots/lock-screen.jpg" width="250" alt="Tela de desbloqueio com biometria"/>
@@ -199,15 +125,11 @@ O acesso ao cofre é protegido por autenticação biométrica.
 
 ### Gerador de senhas
 
-Permite gerar senhas com comprimento configurável.
-
 <p align="center">
   <img src="screenshots/password-generator.jpg" width="250" alt="Gerador de senhas"/>
 </p>
 
 ### Verificação de vazamentos
-
-Identifica se a senha já foi exposta em vazamentos conhecidos, usando o HaveIBeenPwned.
 
 <p align="center">
   <img src="screenshots/breach-check.jpg" width="250" alt="Verificação de vazamento de senha"/>
@@ -215,57 +137,50 @@ Identifica se a senha já foi exposta em vazamentos conhecidos, usando o HaveIBe
 
 ### Editor de credenciais
 
-Permite cadastrar:
-
-- título
-- usuário/email
-- senha
-- URL
-- notas
+Campos: título, usuário/email, senha, URL, notas — com botão de checagem HIBP no campo de senha.
 
 ---
 
-## 🧪 Testes
+## Testes
 
-A documentação dos testes será adicionada conforme os componentes do projeto forem estabilizados.
+Dependências de teste configuradas (`flutter_test`, `bloc_test`, `mocktail`). Cobertura automatizada completa ainda no roadmap.
+
+```bash
+flutter test
+```
 
 ---
 
-## 🛣️ Roadmap
+## Roadmap
 
 - [x] Cofre local de credenciais
-- [x] Gerador de senhas
+- [x] Gerador de senhas (`Random.secure()`)
 - [x] Autenticação biométrica
-- [x] Interface de gerenciamento de credenciais
-- [x] Verificação de vazamentos
-- [x] Armazenamento criptografado
+- [x] UI de gerenciamento
+- [x] Verificação HIBP (k-anonymity)
+- [x] AES-256-GCM + IV por operação (payload v2)
+- [x] Documentação do modelo criptográfico ([SECURITY.md](SECURITY.md))
 - [ ] Testes automatizados completos
-- [ ] Exportação segura do vault
-- [ ] Importação de credenciais
-- [ ] Backup criptografado
-- [ ] Rotação de chaves
+- [ ] Master password + KDF (Argon2id / PBKDF2)
+- [ ] Fallback PIN quando biometria indisponível
+- [ ] Exportação / importação / backup cifrado
 - [ ] Detecção de senhas reutilizadas
-- [ ] Security audit
-- [ ] Documentação completa do modelo criptográfico
+- [ ] Security audit externo
 
 ---
 
-## 👨‍💻 Autor
+## Autor
 
-**Luiz Felipe Grochevski**
-
-[GitHub](https://github.com/LuizGrochevski)
+**Luiz Felipe Grochevski** — [GitHub](https://github.com/LuizGrochevski)
 
 ---
 
-## ⚠️ Aviso
+## Aviso
 
-Este projeto é destinado a fins educacionais, experimentais e de estudo de segurança de aplicações.
-
-O Secure Vault não deve ser utilizado como único mecanismo de proteção para credenciais críticas sem uma avaliação de segurança independente.
+Projeto **educacional / experimental**. Não use como único cofre para credenciais críticas sem avaliação de segurança independente.
 
 ---
 
-## 📄 Licença
+## Licença
 
-Este projeto está disponível sob a licença MIT.
+MIT
