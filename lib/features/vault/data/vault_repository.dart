@@ -18,7 +18,21 @@ class VaultRepository {
     final encrypted = await _storage.read(key: AppConstants.entriesKey);
     if (encrypted == null || encrypted.isEmpty) return [];
 
-    final decrypted = _encryption.decryptText(encrypted);
+    String decrypted;
+    try {
+      decrypted = _encryption.decryptText(encrypted);
+    } catch (_) {
+      // Best-effort migration from pre-v2 (fixed IV + CBC) blobs.
+      final legacy = await _encryption.tryDecryptLegacy(encrypted);
+      if (legacy == null) rethrow;
+      decrypted = legacy;
+      // Re-save under v2 (AES-GCM, per-op IV) so next load is native path.
+      final list = jsonDecode(decrypted) as List;
+      final entries = list.map((e) => VaultEntry.fromJson(e)).toList();
+      await saveEntries(entries);
+      return entries;
+    }
+
     final list = jsonDecode(decrypted) as List;
     return list.map((e) => VaultEntry.fromJson(e)).toList();
   }
